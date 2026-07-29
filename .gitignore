@@ -1,0 +1,24 @@
+# CMake and generated build output
+build/
+build-*/
+out/
+.deps-*/
+CMakeUserPresets.json
+
+# ROMs and generated recompilation data
+*.z64
+*.n64
+*.v64
+RecompiledFuncs/
+RecompiledPatches/
+
+# Local runtime state and installed Mods
+release/**/mods/
+*.log
+.vscode/
+.idea/
+
+# Temporary release archives should be uploaded as GitHub Release assets
+release/*.zip
+*.tmp
+*.bak

@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+*.png binary
+*.otf binary
+*.ttf binary
+*.zip binary
+*.nrm binary
+*.rtz binary
+*.exe binary
+*.dll binary
+*.bin binary
+*.ico binary
