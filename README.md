@@ -32,22 +32,6 @@ Zelda64Recomp月陨启动器.exe
 release/Zelda64Recompiled-v1.2.2-CN/
 ```
 
-## 从源码构建
-
-### 获取源码
-
-本项目使用 Git 子模块。请使用以下命令克隆：
-
-```powershell
-git clone --recurse-submodules <你的仓库地址>
-cd Z64RE_CN_Launcher
-```
-
-如果已经克隆但没有初始化子模块：
-
-```powershell
-git submodule update --init --recursive
-```
 
 ### 构建环境
 
