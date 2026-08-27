@@ -53,8 +53,7 @@
                     </div>
                 </div>
                 <div class="bottom-left">
-                    <label class="launcher-version">v{{version_number}}</label>
-                    <label class="launcher-cn-version">月陨中文启动器 v1.0.0</label>
+                    <label class="launcher-version">月陨中文启动器 v1.2.2-cn.1.0</label>
                 </div>
             </div>
         </div>
