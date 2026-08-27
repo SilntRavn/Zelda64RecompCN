@@ -1,4 +1,4 @@
-# Zelda64Recomp Simplified Chinese Enhanced Edition
+# Zelda64RecompCN
 
 [简体中文](README.md)
 
