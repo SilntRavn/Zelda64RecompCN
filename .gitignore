@@ -37,6 +37,7 @@ shadercache/*
 !shadercache/.gitkeep
 
 # Local runtime state and installed Mods
+release/
 release/**/mods/
 release/**/saves/
 imgui.ini
