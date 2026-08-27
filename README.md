@@ -1,10 +1,9 @@
-# Zelda64Recomp 简体中文增强版
+# Zelda64Recomp月陨中文启动器
 
 [English](README_EN.md)
 
-这是基于 [Zelda64Recomp v1.2.2](https://github.com/Zelda64Recomp/Zelda64Recomp/tree/v1.2.2) 的简体中文增强版，提供中文启动器、中文游戏界面和一些额外功能。
+这是基于 [Zelda64Recomp v1.2.2](https://github.com/Zelda64Recomp/Zelda64Recomp/tree/v1.2.2) 的中文增强版，在完全汉化的基础上添加了许多原版启动器没有的实用功能。
 
-本项目不是 Zelda64Recomp 官方发行版。原项目的版权归原作者及相关贡献者所有。
 
 ## 项目内容
 
