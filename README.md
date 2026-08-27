@@ -33,7 +33,7 @@ release/Zelda64Recompiled-v1.2.2-CN/
 ```
 
 
-### 构建环境
+## 构建环境
 
 Windows 构建需要：
 
