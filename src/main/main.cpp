@@ -144,7 +144,7 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
     flags |= SDL_WINDOW_VULKAN;
 #endif
 
-    window = SDL_CreateWindow("Zelda 64: Recompiled", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600, 960,  flags);
+    window = SDL_CreateWindow(zelda64::program_name.data(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600, 960, flags);
 #if defined(__linux__)
     SetImageAsIcon("icons/512.png",window);
     if (ultramodern::renderer::get_graphics_config().wm_option == ultramodern::renderer::WindowMode::Fullscreen) { // TODO: Remove once RT64 gets native fullscreen support on Linux
@@ -194,14 +194,27 @@ static uint32_t output_channels = 2;
 constexpr uint32_t duplicated_input_frames = 4;
 // The number of output frames to skip for playback (to avoid playing duplicate inputs twice).
 static uint32_t discarded_output_frames;
+static uint32_t audio_converter_speed_multiplier = 0;
 
 constexpr uint32_t bytes_per_frame = input_channels * sizeof(float);
 
+uint32_t effective_input_sample_rate(uint32_t speed_multiplier) {
+    return sample_rate * speed_multiplier;
+}
+
+void update_audio_converter(uint32_t speed_multiplier);
+
 void queue_samples(int16_t* audio_data, size_t sample_count) {
-    // Buffer for holding the output of swapping the audio channels. This is reused across
-    // calls to reduce runtime allocations.
+    // These buffers persist between chunks to keep resampling continuous.
     static std::vector<float> swap_buffer;
     static std::array<float, duplicated_input_frames * input_channels> duplicated_sample_buffer;
+
+    const uint32_t speed_multiplier = ultramodern::get_speed_multiplier();
+    if (audio_converter_speed_multiplier != speed_multiplier) {
+        SDL_ClearQueuedAudio(audio_device);
+        update_audio_converter(speed_multiplier);
+        duplicated_sample_buffer.fill(0.0f);
+    }
 
     // Make sure the swap buffer is large enough to hold the audio data, including any extra space needed for resampling.
     size_t resampled_sample_count = sample_count + duplicated_input_frames * input_channels;
@@ -241,7 +254,8 @@ void queue_samples(int16_t* audio_data, size_t sample_count) {
         throw std::runtime_error("Error using SDL audio converter");
     }
 
-    uint64_t cur_queued_microseconds = uint64_t(SDL_GetQueuedAudioSize(audio_device)) / bytes_per_frame * 1000000 / sample_rate;
+    uint64_t cur_queued_microseconds = uint64_t(SDL_GetQueuedAudioSize(audio_device)) /
+        (output_channels * sizeof(float)) * 1000000 / output_sample_rate;
     uint32_t num_bytes_to_queue = audio_convert.len_cvt - output_channels * discarded_output_frames * sizeof(swap_buffer[0]);
     float* samples_to_queue = swap_buffer.data() + output_channels * discarded_output_frames / 2;
 
@@ -268,7 +282,7 @@ size_t get_frames_remaining() {
     uint64_t buffered_byte_count = SDL_GetQueuedAudioSize(audio_device);
 
     // Scale the byte count based on the ratio of sample rates and channel counts.
-    buffered_byte_count = buffered_byte_count * 2 * sample_rate / output_sample_rate / output_channels;
+    buffered_byte_count = buffered_byte_count * 2 * effective_input_sample_rate(ultramodern::get_speed_multiplier()) / output_sample_rate / output_channels;
 
     // Adjust the reported count to be some number of refreshes in the future, which helps ensure that
     // there are enough samples even if the audio thread experiences a small amount of lag. This prevents
@@ -285,8 +299,9 @@ size_t get_frames_remaining() {
     return static_cast<uint32_t>(buffered_byte_count / bytes_per_frame);
 }
 
-void update_audio_converter() {
-    int ret = SDL_BuildAudioCVT(&audio_convert, AUDIO_F32, input_channels, sample_rate, AUDIO_F32, output_channels, output_sample_rate);
+void update_audio_converter(uint32_t speed_multiplier) {
+    uint32_t input_sample_rate = effective_input_sample_rate(speed_multiplier);
+    int ret = SDL_BuildAudioCVT(&audio_convert, AUDIO_F32, input_channels, input_sample_rate, AUDIO_F32, output_channels, output_sample_rate);
 
     if (ret < 0) {
         printf("Error creating SDL audio converter: %s\n", SDL_GetError());
@@ -294,13 +309,14 @@ void update_audio_converter() {
     }
 
     // Calculate the number of samples to discard based on the sample rate ratio and the duplicate frame count.
-    discarded_output_frames = duplicated_input_frames * output_sample_rate / sample_rate;
+    discarded_output_frames = duplicated_input_frames * output_sample_rate / input_sample_rate;
+    audio_converter_speed_multiplier = speed_multiplier;
 }
 
 void set_frequency(uint32_t freq) {
     sample_rate = freq;
     
-    update_audio_converter();
+    update_audio_converter(ultramodern::get_speed_multiplier());
 }
 
 void reset_audio(uint32_t output_freq) {
@@ -324,7 +340,7 @@ void reset_audio(uint32_t output_freq) {
     SDL_PauseAudioDevice(audio_device, 0);
 
     output_sample_rate = output_freq;
-    update_audio_converter();
+    update_audio_converter(ultramodern::get_speed_multiplier());
 }
 
 extern RspUcodeFunc njpgdspMain;
@@ -660,6 +676,7 @@ int main(int argc, char** argv) {
     REGISTER_FUNC(recomp_get_window_resolution);
     REGISTER_FUNC(recomp_get_target_aspect_ratio);
     REGISTER_FUNC(recomp_get_target_framerate);
+    REGISTER_FUNC(recomp_get_game_speed_multiplier);
     REGISTER_FUNC(recomp_get_autosave_enabled);
     REGISTER_FUNC(recomp_get_analog_cam_enabled);
     REGISTER_FUNC(recomp_get_camera_inputs);
@@ -668,6 +685,7 @@ int main(int argc, char** argv) {
     REGISTER_FUNC(recomp_get_low_health_beeps_enabled);
     REGISTER_FUNC(recomp_get_gyro_deltas);
     REGISTER_FUNC(recomp_get_mouse_deltas);
+    REGISTER_FUNC(recomp_get_third_person_mouse_deltas);
     REGISTER_FUNC(recomp_get_inverted_axes);
     REGISTER_FUNC(recomp_get_analog_inverted_axes);
     recompui::register_ui_exports();

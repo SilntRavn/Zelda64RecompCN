@@ -2,13 +2,14 @@
 #define __ZELDA_CONFIG_H__
 
 #include <filesystem>
+#include <cstdint>
 #include <string_view>
 #include "ultramodern/config.hpp"
 #include "recomp_input.h"
 
 namespace zelda64 {
     constexpr std::u8string_view program_id = u8"Zelda64Recompiled";
-    constexpr std::string_view program_name = "Zelda 64: Recompiled";
+    constexpr std::string_view program_name = "Zelda 64: Recompiled CHS";
 
     // TODO: Move loading configs to the runtime once we have a way to allow per-project customization.
     void load_config();
@@ -23,6 +24,22 @@ namespace zelda64 {
     
     bool get_debug_mode_enabled();
     void set_debug_mode_enabled(bool enabled);
+
+    enum class GameSpeed {
+        X1,
+        X2,
+        X4,
+        OptionCount
+    };
+
+    NLOHMANN_JSON_SERIALIZE_ENUM(zelda64::GameSpeed, {
+        {zelda64::GameSpeed::X1, "1x"},
+        {zelda64::GameSpeed::X2, "2x"},
+        {zelda64::GameSpeed::X4, "4x"}
+    });
+
+    GameSpeed get_game_speed();
+    bool set_game_speed(GameSpeed speed);
     
     enum class AutosaveMode {
         On,
@@ -87,6 +104,7 @@ namespace zelda64 {
     AnalogCamMode get_analog_cam_mode();
     void set_analog_cam_mode(AnalogCamMode mode);
 
+    void open_return_to_launcher_prompt();
     void open_quit_game_prompt();
 };
 

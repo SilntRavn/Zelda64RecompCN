@@ -24,9 +24,8 @@ struct ControllerState {
 };
 
 static struct {
-    const Uint8* keys = nullptr;
+    std::array<std::atomic_bool, SDL_NUM_SCANCODES> keyboard_state{};
     SDL_Keymod keymod = SDL_Keymod::KMOD_NONE;
-    int numkeys = 0;
     std::atomic_int32_t mouse_wheel_pos = 0;
     std::mutex cur_controllers_mutex;
     std::vector<SDL_GameController*> cur_controllers{};
@@ -105,6 +104,9 @@ bool sdl_event_filter(void* userdata, SDL_Event* event) {
     case SDL_EventType::SDL_KEYDOWN:
         {
             SDL_KeyboardEvent* keyevent = &event->key;
+            if (keyevent->keysym.scancode >= 0 && keyevent->keysym.scancode < SDL_NUM_SCANCODES) {
+                InputState.keyboard_state[keyevent->keysym.scancode].store(true);
+            }
 
             // Skip repeated events when not in the menu
             if (!recompui::is_context_capturing_input() &&
@@ -129,6 +131,20 @@ bool sdl_event_filter(void* userdata, SDL_Event* event) {
                 }
             }
         }
+        break;
+    case SDL_EventType::SDL_KEYUP:
+        if (event->key.keysym.scancode >= 0 && event->key.keysym.scancode < SDL_NUM_SCANCODES) {
+            InputState.keyboard_state[event->key.keysym.scancode].store(false);
+        }
+        queue_if_enabled(event);
+        break;
+    case SDL_EventType::SDL_WINDOWEVENT:
+        if (event->window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
+            for (auto& pressed : InputState.keyboard_state) {
+                pressed.store(false);
+            }
+        }
+        queue_if_enabled(event);
         break;
     case SDL_EventType::SDL_CONTROLLERDEVICEADDED:
         {
@@ -170,6 +186,13 @@ bool sdl_event_filter(void* userdata, SDL_Event* event) {
             InputState.mouse_wheel_pos.fetch_add(wheel_event->y * (wheel_event->direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1));
         }
         queue_if_enabled(event);
+        break;
+    case SDL_EventType::SDL_MOUSEBUTTONDOWN:
+        if (scanning_device == recomp::InputDevice::Keyboard) {
+            set_scanned_input({(uint32_t)InputType::Mouse, event->button.button});
+        } else {
+            queue_if_enabled(event);
+        }
         break;
     case SDL_EventType::SDL_CONTROLLERBUTTONDOWN:
         if (scanning_device != recomp::InputDevice::COUNT) {
@@ -306,7 +329,12 @@ void recomp::handle_events() {
         exited = sdl_event_filter(nullptr, &cur_event);
 
         // Lock the cursor if all three conditions are true: mouse aiming is enabled, game input is not disabled, and the game has been started. 
-        bool cursor_locked = (recomp::get_mouse_sensitivity() != 0) && !recomp::game_input_disabled() && ultramodern::is_game_started();
+        bool cursor_locked =
+            (recomp::get_mouse_sensitivity() != 0 ||
+             recomp::get_third_person_mouse_sensitivity_x() != 0 ||
+             recomp::get_third_person_mouse_sensitivity_y() != 0) &&
+            !recomp::game_input_disabled() &&
+            ultramodern::is_game_started();
 
         // Hide the cursor based on its enable state, but override visibility to false if the cursor is locked.
         bool cursor_visible = cursor_enabled;
@@ -320,6 +348,10 @@ void recomp::handle_events() {
 
     if (!started && ultramodern::is_game_started()) {
         started = true;
+        SDL_StopTextInput();
+        for (auto& pressed : InputState.keyboard_state) {
+            pressed.store(false);
+        }
         recompui::process_game_started();
     }
 }
@@ -331,46 +363,51 @@ constexpr SDL_GameControllerButton SDL_CONTROLLER_BUTTON_NORTH = SDL_CONTROLLER_
 
 const recomp::DefaultN64Mappings recomp::default_n64_keyboard_mappings = {
     .a = {
+        {.input_type = (uint32_t)InputType::Mouse, .input_id = SDL_BUTTON_RIGHT},
         {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_SPACE}
     },
     .b = {
-        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_LSHIFT}
+        {.input_type = (uint32_t)InputType::Mouse, .input_id = SDL_BUTTON_LEFT}
     },
     .l = {
-        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_E}
+        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_T}
     },
     .r = {
         {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_R}
     },
     .z = {
-        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_Q}
+        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_LSHIFT}
     },
     .start = {
-        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_RETURN}
+        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_TAB}
     },
     .c_left = {
+        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_Q},
         {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_LEFT}
     },
     .c_right = {
+        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_E},
         {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_RIGHT}
     },
     .c_up = {
+        {.input_type = (uint32_t)InputType::Mouse, .input_id = SDL_BUTTON_MIDDLE},
         {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_UP}
     },
     .c_down = {
+        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_C},
         {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_DOWN}
     },
     .dpad_left = {
-        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_J}
+        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_2}
     },
     .dpad_right = {
-        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_L}
+        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_4}
     },
     .dpad_up = {
-        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_I}
+        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_1}
     },
     .dpad_down = {
-        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_K}
+        {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_3}
     },
     .analog_left = {
         {.input_type = (uint32_t)InputType::Keyboard, .input_id = SDL_SCANCODE_A}
@@ -415,20 +452,16 @@ const recomp::DefaultN64Mappings recomp::default_n64_controller_mappings = {
         {.input_type = (uint32_t)InputType::ControllerDigital, .input_id = SDL_CONTROLLER_BUTTON_START},
     },
     .c_left = {
-        {.input_type = (uint32_t)InputType::ControllerAnalog, .input_id = -(SDL_CONTROLLER_AXIS_RIGHTX + 1)},
         {.input_type = (uint32_t)InputType::ControllerDigital, .input_id = SDL_CONTROLLER_BUTTON_NORTH},
     },
     .c_right = {
-        {.input_type = (uint32_t)InputType::ControllerAnalog, .input_id = SDL_CONTROLLER_AXIS_RIGHTX + 1},
-        {.input_type = (uint32_t)InputType::ControllerDigital, .input_id = SDL_CONTROLLER_BUTTON_EAST},
+        {.input_type = (uint32_t)InputType::ControllerDigital, .input_id = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER},
     },
     .c_up = {
-        {.input_type = (uint32_t)InputType::ControllerAnalog, .input_id = -(SDL_CONTROLLER_AXIS_RIGHTY + 1)},
         {.input_type = (uint32_t)InputType::ControllerDigital, .input_id = SDL_CONTROLLER_BUTTON_RIGHTSTICK},
     },
     .c_down = {
-        {.input_type = (uint32_t)InputType::ControllerAnalog, .input_id = SDL_CONTROLLER_AXIS_RIGHTY + 1},
-        {.input_type = (uint32_t)InputType::ControllerDigital, .input_id = SDL_CONTROLLER_BUTTON_RIGHTSHOULDER},
+        {.input_type = (uint32_t)InputType::ControllerDigital, .input_id = SDL_CONTROLLER_BUTTON_EAST},
     },
     .dpad_left = {
         {.input_type = (uint32_t)InputType::ControllerDigital, .input_id = SDL_CONTROLLER_BUTTON_DPAD_LEFT},
@@ -467,7 +500,6 @@ const recomp::DefaultN64Mappings recomp::default_n64_controller_mappings = {
 };
 
 void recomp::poll_inputs() {
-    InputState.keys = SDL_GetKeyboardState(&InputState.numkeys);
     InputState.keymod = SDL_GetModState();
 
     {
@@ -578,6 +610,15 @@ bool controller_button_state(int32_t input_id) {
     return false;
 }
 
+bool mouse_button_state(int32_t input_id) {
+    if (input_id < 1 || input_id > 32) {
+        return false;
+    }
+
+    const Uint32 button_mask = Uint32{1} << (input_id - 1);
+    return (SDL_GetMouseState(nullptr, nullptr) & button_mask) != 0;
+}
+
 static std::atomic_bool right_analog_suppressed = false;
 
 float controller_axis_state(int32_t input_id, bool allow_suppression) {
@@ -611,11 +652,11 @@ float controller_axis_state(int32_t input_id, bool allow_suppression) {
 float recomp::get_input_analog(const recomp::InputField& field) {
     switch ((InputType)field.input_type) {
     case InputType::Keyboard:
-        if (InputState.keys && field.input_id >= 0 && field.input_id < InputState.numkeys) {
+        if (field.input_id >= 0 && field.input_id < SDL_NUM_SCANCODES) {
             if (should_override_keystate(static_cast<SDL_Scancode>(field.input_id), InputState.keymod)) {
                 return 0.0f;
             }
-            return InputState.keys[field.input_id] ? 1.0f : 0.0f;
+            return InputState.keyboard_state[field.input_id].load() ? 1.0f : 0.0f;
         }
         return 0.0f;
     case InputType::ControllerDigital:
@@ -623,8 +664,7 @@ float recomp::get_input_analog(const recomp::InputField& field) {
     case InputType::ControllerAnalog:
         return controller_axis_state(field.input_id, true);
     case InputType::Mouse:
-        // TODO mouse support
-        return 0.0f;
+        return mouse_button_state(field.input_id) ? 1.0f : 0.0f;
     case InputType::None:
         return false;
     }
@@ -641,11 +681,11 @@ float recomp::get_input_analog(const std::span<const recomp::InputField> fields)
 bool recomp::get_input_digital(const recomp::InputField& field) {
     switch ((InputType)field.input_type) {
     case InputType::Keyboard:
-        if (InputState.keys && field.input_id >= 0 && field.input_id < InputState.numkeys) {
+        if (field.input_id >= 0 && field.input_id < SDL_NUM_SCANCODES) {
             if (should_override_keystate(static_cast<SDL_Scancode>(field.input_id), InputState.keymod)) {
                 return false;
             }
-            return InputState.keys[field.input_id] != 0;
+            return InputState.keyboard_state[field.input_id].load();
         }
         return false;
     case InputType::ControllerDigital:
@@ -654,8 +694,7 @@ bool recomp::get_input_digital(const recomp::InputField& field) {
         // TODO adjustable threshold
         return controller_axis_state(field.input_id, true) >= axis_threshold;
     case InputType::Mouse:
-        // TODO mouse support
-        return false;
+        return mouse_button_state(field.input_id);
     case InputType::None:
         return false;
     }
@@ -681,6 +720,14 @@ void recomp::get_mouse_deltas(float* x, float* y) {
     float sensitivity = (float)recomp::get_mouse_sensitivity() / 100.0f;
     *x = cur_mouse_delta[0] * sensitivity;
     *y = cur_mouse_delta[1] * sensitivity;
+}
+
+void recomp::get_third_person_mouse_deltas(float* x, float* y) {
+    std::array<float, 2> cur_mouse_delta = InputState.mouse_delta;
+    float sensitivity_x = (float)recomp::get_third_person_mouse_sensitivity_x() / 100.0f;
+    float sensitivity_y = (float)recomp::get_third_person_mouse_sensitivity_y() / 100.0f;
+    *x = cur_mouse_delta[0] * sensitivity_x;
+    *y = cur_mouse_delta[1] * sensitivity_y;
 }
 
 void recomp::apply_joystick_deadzone(float x_in, float y_in, float* x_out, float* y_out) {
@@ -893,6 +940,54 @@ std::string controller_axis_to_string(int axis) {
     }
 }
 
+std::string mouse_button_text(int button) {
+    switch (button) {
+    case SDL_BUTTON_LEFT:
+        return std::string(reinterpret_cast<const char*>(u8"左键"));
+    case SDL_BUTTON_MIDDLE:
+        return std::string(reinterpret_cast<const char*>(u8"中键"));
+    case SDL_BUTTON_RIGHT:
+        return std::string(reinterpret_cast<const char*>(u8"右键"));
+    case SDL_BUTTON_X1:
+    case SDL_BUTTON_X2:
+        return std::string(reinterpret_cast<const char*>(u8"侧键"));
+    default:
+        return std::string(reinterpret_cast<const char*>(u8"按键"));
+    }
+}
+
+std::string mouse_button_number(int button) {
+    switch (button) {
+    case SDL_BUTTON_LEFT:
+    case SDL_BUTTON_MIDDLE:
+    case SDL_BUTTON_RIGHT:
+        return "";
+    case SDL_BUTTON_X1:
+        return "1";
+    case SDL_BUTTON_X2:
+        return "2";
+    default:
+        return std::to_string(button);
+    }
+}
+
+std::string mouse_button_to_string(int button) {
+    switch (button) {
+    case SDL_BUTTON_LEFT:
+        return std::string(reinterpret_cast<const char*>(u8"\uE100"));
+    case SDL_BUTTON_MIDDLE:
+        return std::string(reinterpret_cast<const char*>(u8"\uE101"));
+    case SDL_BUTTON_RIGHT:
+        return std::string(reinterpret_cast<const char*>(u8"\uE102"));
+    case SDL_BUTTON_X1:
+        return std::string(reinterpret_cast<const char*>(u8"\uE104"));
+    case SDL_BUTTON_X2:
+        return std::string(reinterpret_cast<const char*>(u8"\uE103"));
+    default:
+        return "M" + std::to_string(button);
+    }
+}
+
 std::string recomp::InputField::to_string() const {
     switch ((InputType)input_type) {
         case InputType::None:
@@ -903,7 +998,21 @@ std::string recomp::InputField::to_string() const {
             return controller_axis_to_string(input_id);
         case InputType::Keyboard:
             return keyboard_input_to_string((SDL_Scancode)input_id);
+        case InputType::Mouse:
+            return mouse_button_to_string(input_id);
         default:
             return std::to_string(input_type) + "," + std::to_string(input_id);
     }
+}
+
+bool recomp::InputField::is_mouse() const {
+    return (InputType)input_type == InputType::Mouse;
+}
+
+std::string recomp::InputField::mouse_button_text() const {
+    return is_mouse() ? ::mouse_button_text(input_id) : "";
+}
+
+std::string recomp::InputField::mouse_button_number() const {
+    return is_mouse() ? ::mouse_button_number(input_id) : "";
 }

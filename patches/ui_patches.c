@@ -1,4 +1,5 @@
 #include "patches.h"
+#include "graphics.h"
 #include "transform_ids.h"
 #include "buffers.h"
 #include "sys_cfb.h"
@@ -97,7 +98,8 @@ RECOMP_PATCH void Graph_ExecuteAndDraw(GraphicsContext* gfxCtx, GameState* gameS
     OPEN_DISPS(gfxCtx);
     
     // @recomp Send the current framerate to RT64, including any extra VI interrupt periods. 
-    gEXSetRefreshRate(POLY_OPA_DISP++, 60 / (gameState->framerateDivisor + extra_vis));
+    gEXSetRefreshRate(POLY_OPA_DISP++,
+                      (60 * recomp_get_game_speed_multiplier()) / (gameState->framerateDivisor + extra_vis));
 
     // @recomp Edit billboard groups to skip interpolation if the camera also skipped.
     if (gameState->destroy == Play_Destroy) {

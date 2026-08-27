@@ -27,6 +27,8 @@ float analog_camera_y_sensitivity = 500.0f;
 // float analog_camera_acceleration = 500.0f;
 
 static const float analog_cam_threshold = 0.1f;
+static const float mouse_camera_yaw_scale = 37.5f;
+static const float mouse_camera_pitch_scale = 12.5f;
 
 RECOMP_EXPORT void recomp_set_camera_fixes(bool new_val) {
     camera_fixes = new_val;
@@ -65,11 +67,17 @@ void update_analog_cam(Camera* c) {
         analog_cam_active = false;
     }
 
-    // Enable analog cam if the right stick is held.
-    float input_x, input_y;
-    recomp_get_camera_inputs(&input_x, &input_y);
+    // Keep right-stick velocity and direct mouse movement independent. A
+    // mouse delta represents distance, so treating it as a clamped stick
+    // position loses fast movement and makes small movement feel sticky.
+    float stick_x, stick_y;
+    recomp_get_camera_inputs(&stick_x, &stick_y);
 
-    if (fabsf(input_x) >= analog_cam_threshold || fabsf(input_y) >= analog_cam_threshold) {
+    float mouse_x, mouse_y;
+    recomp_get_third_person_mouse_deltas(&mouse_x, &mouse_y);
+
+    if (fabsf(stick_x) >= analog_cam_threshold || fabsf(stick_y) >= analog_cam_threshold ||
+        fabsf(mouse_x) > 0.0f || fabsf(mouse_y) > 0.0f) {
         analog_cam_active = true;
     }
 
@@ -86,18 +94,20 @@ void update_analog_cam(Camera* c) {
         recomp_get_analog_inverted_axes(&inverted_x, &inverted_y);
 
         if (inverted_x) {
-            input_x = -input_x;
+            stick_x = -stick_x;
+            mouse_x = -mouse_x;
         }
 
         if (inverted_y) {
-            input_y = -input_y;
+            stick_y = -stick_y;
+            mouse_y = -mouse_y;
         }
 
-        analog_camera_yaw_vel = -input_x * analog_camera_x_sensitivity;
-        analog_camera_pitch_vel = input_y * analog_camera_y_sensitivity;
+        analog_camera_yaw_vel = -stick_x * analog_camera_x_sensitivity;
+        analog_camera_pitch_vel = stick_y * analog_camera_y_sensitivity;
 
-        analog_camera_pos.pitch += analog_camera_pitch_vel;
-        analog_camera_pos.yaw += analog_camera_yaw_vel;
+        analog_camera_pos.pitch += analog_camera_pitch_vel + mouse_y * mouse_camera_pitch_scale;
+        analog_camera_pos.yaw += analog_camera_yaw_vel - mouse_x * mouse_camera_yaw_scale;
 
         if (analog_camera_pos.pitch > 0x36B0) {
             analog_camera_pos.pitch = 0x36B0;

@@ -219,7 +219,7 @@ public:
                 {"LatoLatin-Regular.ttf", false},
                 {"ChiaroNormal.otf", false},
                 {"ChiaroBold.otf", false},
-                {"CnUiNormal.ttf", false},
+                {"CnUiNormal.ttf", true},
                 {"CnUiBold.ttf", false},
                 {"CnTitle.ttf", false},
                 {"ZeldaTitle.otf", false},

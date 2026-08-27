@@ -1,9 +1,18 @@
 # CMake and generated build output
 build/
 build-*/
+cmake-build*/
 out/
 .deps-*/
 CMakeUserPresets.json
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+Testing/
+.cache/
 
 # ROMs and generated recompilation data
 *.z64
@@ -11,14 +20,63 @@ CMakeUserPresets.json
 *.v64
 RecompiledFuncs/
 RecompiledPatches/
+N64Recomp.exe
+RSPRecomp.exe
+
+# Compiler and linker outputs
+*.d
+*.o
+*.obj
+*.elf
+*.map
+*.pdb
+*.ilk
+*.exp
+*.a
+shadercache/*
+!shadercache/.gitkeep
 
 # Local runtime state and installed Mods
 release/**/mods/
+release/**/saves/
+imgui.ini
+rt64.log
 *.log
 .vscode/
 .idea/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Generated patch and RSP outputs
+patches/*.d
+patches/*.o
+patches/*.elf
+patches/*.bin
+patches/*.map
+rsp/*.cpp
+
+# Sass / Node dependencies
+assets/scss/node_modules/
+assets/scss/.sass-cache/
+node_modules/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.swp
+*.swo
 
 # Temporary release archives should be uploaded as GitHub Release assets
 release/*.zip
+release/*.7z
+release/**/*.pdb
+release/**/*.log
 *.tmp
 *.bak
+*.orig
+*.rej

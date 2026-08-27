@@ -734,8 +734,10 @@ scrollbarhorizontal sliderbar {
 
 .config__wrapper {
   flex: 1 1 100%;
+  min-width: 0;
   width: auto;
   height: auto;
+  box-sizing: border-box;
   padding: 16dp;
   border-radius: 0dp;
   border-bottom-right-radius: 16dp;
@@ -744,6 +746,8 @@ scrollbarhorizontal sliderbar {
   text-align: left;
 }
 .config__wrapper p {
+  width: 100%;
+  box-sizing: border-box;
   padding: 16dp;
   line-height: 28dp;
   white-space: pre-line;
@@ -754,6 +758,12 @@ scrollbarhorizontal sliderbar {
 .config__wrapper p i {
   color: #E9CD35;
   font-style: normal;
+}
+
+.config__wrapper--general-scroll {
+  min-height: 0;
+  padding-right: 24dp;
+  overflow-y: auto;
 }
 
 .config__hz-wrapper {
@@ -2152,7 +2162,7 @@ scrollbarhorizontal sliderbar {
   line-height: 48dp;
 }
 .subtitle-title .launcher-title-cn {
-  font-family: cntitle;
+  font-family: DFPHeiW9-GB;
   font-size: 74dp;
   font-weight: normal;
   letter-spacing: 0dp;
@@ -2565,6 +2575,28 @@ button {
 .launcher .menu-list-item:focus:not(:disabled, [disabled]),
 .launcher .menu-list-item:hover:not(:disabled, [disabled]) {
   color: #B97DF2;
+}
+
+.control-option__binding-mouse-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.control-option__binding-mouse-text {
+  font-family: cnui;
+  font-size: 12dp;
+  line-height: 16dp;
+  letter-spacing: 0dp;
+  white-space: nowrap;
+  color: #FFFFFF;
+}
+
+.control-option__binding-mouse-number {
+  margin-left: 4dp;
+  color: #FFFFFF;
 }
 
 .subtitle-title .launcher-title-en {

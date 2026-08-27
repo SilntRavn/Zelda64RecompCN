@@ -53,7 +53,7 @@
                                             data-event-focus="set_input_row_focus(i)"
                                             data-for="cur_binding, j : input_bindings"
                                             data-event-click="set_input_binding(i,j)"
-                                            class="prompt-font control-option__binding"
+                                            class="control-option__binding"
                                             data-attr-bind-slot="j"
                                             data-attr-style="i == 0 ? 'nav-up:#cont_kb_toggle' : 'nav-up:auto'"
                                         >
@@ -63,7 +63,7 @@
                                                     <svg class="control-option__binding-edge-svg" src="icons/RecordBorder.svg" />
                                                 </div>
                                             </div>
-                                            <div class="control-option__binding-icon">{{cur_binding}}</div>
+                                            <div class="prompt-font control-option__binding-icon">{{cur_binding}}</div>
                                         </button>
                                     </div>
                                     <button

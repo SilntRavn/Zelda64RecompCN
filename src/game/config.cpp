@@ -24,10 +24,10 @@ constexpr std::u8string_view controls_filename = u8"controls.json";
 constexpr std::u8string_view sound_filename = u8"sound.json";
 
 constexpr auto res_default            = ultramodern::renderer::Resolution::Auto;
-constexpr auto hr_default             = ultramodern::renderer::HUDRatioMode::Clamp16x9;
+constexpr auto hr_default             = ultramodern::renderer::HUDRatioMode::Full;
 constexpr auto api_default            = ultramodern::renderer::GraphicsApi::Auto;
 constexpr auto ar_default             = ultramodern::renderer::AspectRatio::Expand;
-constexpr auto msaa_default           = ultramodern::renderer::Antialiasing::MSAA2X;
+constexpr auto msaa_default           = ultramodern::renderer::Antialiasing::None;
 constexpr auto rr_default             = ultramodern::renderer::RefreshRate::Display;
 constexpr auto hpfb_default           = ultramodern::renderer::HighPrecisionFramebuffer::Auto;
 constexpr int ds_default              = 1;
@@ -37,7 +37,7 @@ constexpr bool developer_mode_default = false;
 static bool is_steam_deck = false;
 
 ultramodern::renderer::WindowMode wm_default() {
-    return is_steam_deck ? ultramodern::renderer::WindowMode::Fullscreen : ultramodern::renderer::WindowMode::Windowed;
+    return ultramodern::renderer::WindowMode::Fullscreen;
 }
 
 #ifdef __gnu_linux__
@@ -231,11 +231,14 @@ bool save_json_with_backups(const std::filesystem::path& path, const nlohmann::j
 bool save_general_config(const std::filesystem::path& path) {
     nlohmann::json config_json{};
 
+    zelda64::to_json(config_json["game_speed"], zelda64::get_game_speed());
     zelda64::to_json(config_json["targeting_mode"], zelda64::get_targeting_mode());
     recomp::to_json(config_json["background_input_mode"], recomp::get_background_input_mode());
     config_json["rumble_strength"] = recomp::get_rumble_strength();
     config_json["gyro_sensitivity"] = recomp::get_gyro_sensitivity();
     config_json["mouse_sensitivity"] = recomp::get_mouse_sensitivity();
+    config_json["third_person_mouse_sensitivity_x"] = recomp::get_third_person_mouse_sensitivity_x();
+    config_json["third_person_mouse_sensitivity_y"] = recomp::get_third_person_mouse_sensitivity_y();
     config_json["joystick_deadzone"] = recomp::get_joystick_deadzone();
     config_json["autosave_mode"] = zelda64::get_autosave_mode();
     config_json["camera_invert_mode"] = zelda64::get_camera_invert_mode();
@@ -247,15 +250,22 @@ bool save_general_config(const std::filesystem::path& path) {
 }
 
 void set_general_settings_from_json(const nlohmann::json& config_json) {
+    zelda64::set_game_speed(from_or_default(config_json, "game_speed", zelda64::GameSpeed::X1));
     zelda64::set_targeting_mode(from_or_default(config_json, "targeting_mode", zelda64::TargetingMode::Switch));
-    recomp::set_background_input_mode(from_or_default(config_json, "background_input_mode", recomp::BackgroundInputMode::On));
-    recomp::set_rumble_strength(from_or_default(config_json, "rumble_strength", 25));
+    recomp::set_background_input_mode(from_or_default(config_json, "background_input_mode", recomp::BackgroundInputMode::Off));
+    recomp::set_rumble_strength(from_or_default(config_json, "rumble_strength", 100));
     recomp::set_gyro_sensitivity(from_or_default(config_json, "gyro_sensitivity", 50));
-    recomp::set_mouse_sensitivity(from_or_default(config_json, "mouse_sensitivity", is_steam_deck ? 50 : 0));
-    recomp::set_joystick_deadzone(from_or_default(config_json, "joystick_deadzone", 5));
-    zelda64::set_autosave_mode(from_or_default(config_json, "autosave_mode", zelda64::AutosaveMode::On));
-    zelda64::set_camera_invert_mode(from_or_default(config_json, "camera_invert_mode", zelda64::CameraInvertMode::InvertY));
-    zelda64::set_analog_cam_mode(from_or_default(config_json, "analog_cam_mode", zelda64::AnalogCamMode::Off));
+    recomp::set_mouse_sensitivity(from_or_default(config_json, "mouse_sensitivity", 50));
+    recomp::set_third_person_mouse_sensitivity_x(from_or_default(
+        config_json, "third_person_mouse_sensitivity_x",
+        from_or_default(config_json, "third_person_mouse_sensitivity", 30)));
+    recomp::set_third_person_mouse_sensitivity_y(from_or_default(
+        config_json, "third_person_mouse_sensitivity_y",
+        from_or_default(config_json, "third_person_mouse_sensitivity", 45)));
+    recomp::set_joystick_deadzone(from_or_default(config_json, "joystick_deadzone", 0));
+    zelda64::set_autosave_mode(from_or_default(config_json, "autosave_mode", zelda64::AutosaveMode::Off));
+    zelda64::set_camera_invert_mode(from_or_default(config_json, "camera_invert_mode", zelda64::CameraInvertMode::InvertNone));
+    zelda64::set_analog_cam_mode(from_or_default(config_json, "analog_cam_mode", zelda64::AnalogCamMode::On));
     zelda64::set_analog_camera_invert_mode(from_or_default(config_json, "analog_camera_invert_mode", zelda64::CameraInvertMode::InvertNone));
     zelda64::set_debug_mode_enabled(from_or_default(config_json, "debug_mode", false));
 }

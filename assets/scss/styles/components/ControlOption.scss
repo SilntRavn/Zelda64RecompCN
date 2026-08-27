@@ -112,6 +112,28 @@
     opacity: 1;
 }
 
+.control-option__binding-mouse-label {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.control-option__binding-mouse-text {
+    font-family: cnui;
+    font-size: space(12);
+    line-height: space(16);
+    letter-spacing: 0dp;
+    white-space: nowrap;
+    color: #FFFFFF;
+}
+
+.control-option__binding-mouse-number {
+    margin-left: space(4);
+    color: #FFFFFF;
+}
+
 @keyframes control-option__binding-recording-scale {
 	0% {
 		transform: scale(1);

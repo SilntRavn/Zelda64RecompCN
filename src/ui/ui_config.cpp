@@ -211,6 +211,28 @@ void close_config_menu() {
     close_config_menu_impl();
 }
 
+void zelda64::open_return_to_launcher_prompt() {
+    recompui::open_choice_prompt(
+        "返回启动器主界面？",
+        "上次保存后的所有游戏进度都将丢失。启动器将重新打开。",
+        "返回主界面",
+        "取消",
+        []() {
+            zelda64::save_config();
+            if (zelda64::relaunch_application()) {
+                ultramodern::quit();
+            } else {
+                recompui::message_box("无法重新打开启动器，请检查程序目录和系统权限。");
+            }
+        },
+        []() {},
+        recompui::ButtonVariant::Error,
+        recompui::ButtonVariant::Tertiary,
+        true,
+        "config__return-launcher-button"
+    );
+}
+
 void zelda64::open_quit_game_prompt() {
     recompui::open_choice_prompt(
         "确定要退出吗？",
@@ -233,7 +255,10 @@ struct ControlOptionsContext {
     int rumble_strength; // 0 to 100
     int gyro_sensitivity; // 0 to 100
     int mouse_sensitivity; // 0 to 100
+    int third_person_mouse_sensitivity_x; // 0 to 100
+    int third_person_mouse_sensitivity_y; // 0 to 100
     int joystick_deadzone; // 0 to 100
+    zelda64::GameSpeed game_speed;
     zelda64::TargetingMode targeting_mode;
     recomp::BackgroundInputMode background_input_mode;
     zelda64::AutosaveMode autosave_mode;
@@ -243,6 +268,35 @@ struct ControlOptionsContext {
 };
 
 ControlOptionsContext control_options_context;
+
+zelda64::GameSpeed zelda64::get_game_speed() {
+    return control_options_context.game_speed;
+}
+
+static uint32_t game_speed_multiplier(zelda64::GameSpeed speed) {
+    switch (speed) {
+        case zelda64::GameSpeed::X2:
+            return 2;
+        case zelda64::GameSpeed::X4:
+            return 4;
+        case zelda64::GameSpeed::X1:
+            return 1;
+        default:
+            return 0;
+    }
+}
+
+bool zelda64::set_game_speed(zelda64::GameSpeed speed) {
+    if (!ultramodern::set_speed_multiplier(game_speed_multiplier(speed))) {
+        return false;
+    }
+
+    control_options_context.game_speed = speed;
+    if (general_model_handle) {
+        general_model_handle.DirtyVariable("game_speed");
+    }
+    return true;
+}
 
 int recomp::get_rumble_strength() {
     return control_options_context.rumble_strength;
@@ -263,6 +317,14 @@ int recomp::get_mouse_sensitivity() {
     return control_options_context.mouse_sensitivity;
 }
 
+int recomp::get_third_person_mouse_sensitivity_x() {
+    return control_options_context.third_person_mouse_sensitivity_x;
+}
+
+int recomp::get_third_person_mouse_sensitivity_y() {
+    return control_options_context.third_person_mouse_sensitivity_y;
+}
+
 int recomp::get_joystick_deadzone() {
     return control_options_context.joystick_deadzone;
 }
@@ -278,6 +340,20 @@ void recomp::set_mouse_sensitivity(int sensitivity) {
     control_options_context.mouse_sensitivity = sensitivity;
     if (general_model_handle) {
         general_model_handle.DirtyVariable("mouse_sensitivity");
+    }
+}
+
+void recomp::set_third_person_mouse_sensitivity_x(int sensitivity) {
+    control_options_context.third_person_mouse_sensitivity_x = sensitivity;
+    if (general_model_handle) {
+        general_model_handle.DirtyVariable("third_person_mouse_sensitivity_x");
+    }
+}
+
+void recomp::set_third_person_mouse_sensitivity_y(int sensitivity) {
+    control_options_context.third_person_mouse_sensitivity_y = sensitivity;
+    if (general_model_handle) {
+        general_model_handle.DirtyVariable("third_person_mouse_sensitivity_y");
     }
 }
 
@@ -542,6 +618,10 @@ public:
             [](const std::string& param, Rml::Event& event) {
                 zelda64::open_quit_game_prompt();
             });
+        recompui::register_event(listener, "open_return_to_launcher_prompt",
+            [](const std::string& param, Rml::Event& event) {
+                zelda64::open_return_to_launcher_prompt();
+            });
 
         recompui::register_event(listener, "toggle_input_device",
             [](const std::string& param, Rml::Event& event) {
@@ -718,6 +798,24 @@ public:
 
         constructor.RegisterTransformFunc("get_input_enum_name", [](const Rml::VariantList& inputs) {
             return Rml::Variant{recomp::get_input_enum_name(static_cast<recomp::GameInput>(inputs.at(0).Get<size_t>()))};
+        });
+
+        constructor.RegisterTransformFunc("input_binding_is_mouse", [](const Rml::VariantList& inputs) {
+            recomp::GameInput input = static_cast<recomp::GameInput>(inputs.at(0).Get<size_t>());
+            size_t binding_index = inputs.at(1).Get<size_t>();
+            return Rml::Variant{recomp::get_input_binding(input, binding_index, cur_device).is_mouse()};
+        });
+
+        constructor.RegisterTransformFunc("input_binding_mouse_text", [](const Rml::VariantList& inputs) {
+            recomp::GameInput input = static_cast<recomp::GameInput>(inputs.at(0).Get<size_t>());
+            size_t binding_index = inputs.at(1).Get<size_t>();
+            return Rml::Variant{recomp::get_input_binding(input, binding_index, cur_device).mouse_button_text()};
+        });
+
+        constructor.RegisterTransformFunc("input_binding_mouse_number", [](const Rml::VariantList& inputs) {
+            recomp::GameInput input = static_cast<recomp::GameInput>(inputs.at(0).Get<size_t>());
+            size_t binding_index = inputs.at(1).Get<size_t>();
+            return Rml::Variant{recomp::get_input_binding(input, binding_index, cur_device).mouse_button_number()};
         });
 
         constructor.BindEventCallback("set_input_binding",
@@ -915,7 +1013,17 @@ public:
         constructor.Bind("rumble_strength", &control_options_context.rumble_strength);
         constructor.Bind("gyro_sensitivity", &control_options_context.gyro_sensitivity);
         constructor.Bind("mouse_sensitivity", &control_options_context.mouse_sensitivity);
+        constructor.Bind("third_person_mouse_sensitivity_x", &control_options_context.third_person_mouse_sensitivity_x);
+        constructor.Bind("third_person_mouse_sensitivity_y", &control_options_context.third_person_mouse_sensitivity_y);
         constructor.Bind("joystick_deadzone", &control_options_context.joystick_deadzone);
+        constructor.BindFunc("game_speed",
+            [](Rml::Variant& out) { get_option(control_options_context.game_speed, out); },
+            [](const Rml::Variant& in) {
+                zelda64::GameSpeed speed;
+                set_option(speed, in);
+                zelda64::set_game_speed(speed);
+            }
+        );
         bind_option(constructor, "targeting_mode", &control_options_context.targeting_mode);
         bind_option(constructor, "background_input_mode", &control_options_context.background_input_mode);
         bind_option(constructor, "autosave_mode", &control_options_context.autosave_mode);

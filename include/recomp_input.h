@@ -66,6 +66,9 @@ namespace recomp {
         uint32_t input_type;
         int32_t input_id;
         std::string to_string() const;
+        bool is_mouse() const;
+        std::string mouse_button_text() const;
+        std::string mouse_button_number() const;
         auto operator<=>(const InputField& rhs) const = default;
     };
 
@@ -76,6 +79,7 @@ namespace recomp {
     bool get_input_digital(const std::span<const recomp::InputField> fields);
     void get_gyro_deltas(float* x, float* y);
     void get_mouse_deltas(float* x, float* y);
+    void get_third_person_mouse_deltas(float* x, float* y);
     void get_right_analog(float* x, float* y);
 
     enum class InputDevice {
@@ -174,9 +178,13 @@ namespace recomp {
     // Gyro and mouse sensitivities range from 0 to 100.
     int get_gyro_sensitivity();
     int get_mouse_sensitivity();
+    int get_third_person_mouse_sensitivity_x();
+    int get_third_person_mouse_sensitivity_y();
     int get_joystick_deadzone();
     void set_gyro_sensitivity(int strength);
     void set_mouse_sensitivity(int strength);
+    void set_third_person_mouse_sensitivity_x(int strength);
+    void set_third_person_mouse_sensitivity_y(int strength);
     void set_joystick_deadzone(int strength);
     void apply_joystick_deadzone(float x_in, float y_in, float* x_out, float* y_out);
     void set_right_analog_suppressed(bool suppressed);

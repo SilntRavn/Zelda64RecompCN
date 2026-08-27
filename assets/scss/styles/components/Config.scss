@@ -58,6 +58,12 @@
     }
 }
 
+.config__wrapper--general-scroll {
+    min-height: 0;
+    padding-right: space(24);
+    overflow-y: auto;
+}
+
 .config__hz-wrapper {
     display: flex;
     flex: 1 1 100%;
