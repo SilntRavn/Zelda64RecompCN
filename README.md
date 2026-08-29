@@ -18,7 +18,7 @@
 
 ## 下载与运行
 
-请前往 GitHub 的 [Releases](../../releases) 页面下载最新 Windows 发行包，解压后运行：
+请前往[Releases](../../releases) 页面下载最新 Windows 发行包，解压后运行：
 
 ```text
 Zelda64Recomp月陨启动器.exe
