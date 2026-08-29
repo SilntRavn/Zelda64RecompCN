@@ -51,13 +51,9 @@ Windows 构建需要：
 
 - 上游项目：[Zelda64Recomp](https://github.com/Zelda64Recomp/Zelda64Recomp)
 - 对应上游版本：`v1.2.2`
-- 对应上游 commit：`54950a10408599d1d63802ee21cc2c4b05bfd378`
 - 上游项目使用 [RT64](https://github.com/rt64/rt64) 作为渲染引擎
 
 
-## 许可证与第三方资源
-
-上游源码及本项目基于其修改的源码遵循 [GNU GPLv3](COPYING)。发布修改后的源码或二进制时，请同时提供对应源码，并保留许可证、版权和修改说明。
 ## 致谢
 
 感谢 Zelda64Recomp、N64: Recompiled、RT64、RmlUi、FreeType、lunasvg、Gamepad Motion Helpers 以及其他依赖项目的作者和贡献者。
