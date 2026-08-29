@@ -26,11 +26,6 @@ Zelda64Recomp月陨启动器.exe
 
 运行前需要准备自己合法拥有的北美版《塞尔达传说：梅祖拉的面具》N64 ROM。ROM 不由本项目提供，也不会随发行包分发。
 
-发行包目录位于：
-
-```text
-release/Zelda64Recompiled-v1.2.2-CN/
-```
 
 
 ## 构建环境
